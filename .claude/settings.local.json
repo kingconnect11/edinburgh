@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init -y)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev)",
+      "Bash(npm uninstall:*)",
+      "Bash(find:*)",
+      "Bash(if [ -f /Users/iamtheking/Desktop/Edinburgh_Concierge_2/.gitignore ])",
+      "Bash(then cat /Users/iamtheking/Desktop/Edinburgh_Concierge_2/.gitignore)",
+      "Bash(else echo \"File does not exist\")",
+      "Bash(fi)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
