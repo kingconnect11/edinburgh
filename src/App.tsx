@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List } from 'lucide-react';
+import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List, Loader2, Copy } from 'lucide-react';
 import { VENUES_DATA, Venue } from './data/venues';
 import slateBackground from './slate-background.jpeg';
 import scrollBackground from './scroll-background.jpg';
 import leatherBook from './leather-book.png';
+import knightlyItinerary from './knightly_itinerary.png';
 import backgroundMusic from './background.mp3';
 import conciergeWelcome from './concierge-welcome.mp3';
 import conciergeIcon from './SVG_Butler_Good.svg';
+import { generateItineraryWithClaude, generateConciergeResponse } from './claudeAPI';
 
 const CATEGORIES = [
   { id: 'drinks', label: 'Drinks', icon: Wine, angle: -60 },
@@ -21,9 +23,12 @@ const App = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [itinerary, setItinerary] = useState<number[]>([]);
+  const [itineraryDescription, setItineraryDescription] = useState<string>('');
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [conciergeMessages, setConciergeMessages] = useState<Array<{role: string, content: string}>>([]);
   const [userInput, setUserInput] = useState('');
   const [showMapView, setShowMapView] = useState(false);
+  const [isConciergeThinking, setIsConciergeThinking] = useState(false);
 
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const welcomeSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -62,6 +67,24 @@ const App = () => {
     };
   }, []);
 
+  // Generate Claude AI itinerary description when entering itinerary view
+  useEffect(() => {
+    if (currentView === 'itinerary' && itinerary.length > 0 && !itineraryDescription) {
+      const venues = VENUES_DATA.filter(v => itinerary.includes(v.id));
+      setIsGeneratingDescription(true);
+      generateItineraryWithClaude(venues)
+        .then(description => {
+          setItineraryDescription(description);
+          setIsGeneratingDescription(false);
+        })
+        .catch(error => {
+          console.error('Failed to generate description:', error);
+          setItineraryDescription("A splendid evening awaits you in Edinburgh, Sir! Your carefully curated selection of establishments promises an unforgettable experience through the heart of Dùn Èideann.");
+          setIsGeneratingDescription(false);
+        });
+    }
+  }, [currentView, itinerary, itineraryDescription]);
+
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentView('guide');
@@ -83,63 +106,66 @@ const App = () => {
     }
   };
 
-  const handleSendMessage = () => {
-    if (!userInput.trim()) return;
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || isConciergeThinking) return;
 
+    const userMessage = userInput;
     const newMessages = [
       ...conciergeMessages,
-      { role: 'user', content: userInput }
+      { role: 'user', content: userMessage }
     ];
 
-    // Enhanced search logic
-    const query = userInput.toLowerCase();
-    let recommendations: Venue[] = [];
-
-    // Search by tags, category, name, and description
-    const scored = VENUES_DATA.map(venue => {
-      let score = 0;
-      const searchableText = `${venue.name} ${venue.description} ${venue.tags.join(' ')} ${venue.category}`.toLowerCase();
-
-      // Check if query words match
-      const queryWords = query.split(' ').filter(w => w.length > 2);
-      queryWords.forEach(word => {
-        if (searchableText.includes(word)) score += 10;
-        if (venue.tags.some(tag => tag.toLowerCase().includes(word))) score += 20;
-        if (venue.category.includes(word)) score += 30;
-      });
-
-      return { venue, score };
-    });
-
-    // Get top 3 matches
-    recommendations = scored
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map(item => item.venue);
-
-    // Fallback to category if no matches
-    if (recommendations.length === 0) {
-      if (query.includes('drink') || query.includes('cocktail') || query.includes('bar') || query.includes('whisky') || query.includes('wine')) {
-        recommendations = VENUES_DATA.filter(v => v.category === 'drinks').slice(0, 3);
-      } else if (query.includes('eat') || query.includes('dinner') || query.includes('lunch') || query.includes('food') || query.includes('restaurant')) {
-        recommendations = VENUES_DATA.filter(v => v.category === 'meals').slice(0, 3);
-      } else if (query.includes('coffee') || query.includes('quick') || query.includes('grab') || query.includes('bite') || query.includes('cafe')) {
-        recommendations = VENUES_DATA.filter(v => v.category === 'quick-bites').slice(0, 3);
-      } else if (query.includes('dance') || query.includes('club') || query.includes('party') || query.includes('night')) {
-        recommendations = VENUES_DATA.filter(v => v.category === 'huzz').slice(0, 2);
-      } else if (query.includes('free') || query.includes('park') || query.includes('museum') || query.includes('view') || query.includes('walk')) {
-        recommendations = VENUES_DATA.filter(v => v.category === 'free').slice(0, 3);
-      }
-    }
-
-    const response = recommendations.length > 0
-      ? `Based on what you're looking for, I'd recommend:\n\n${recommendations.map(v => `• ${v.name} - ${v.description}`).join('\n\n')}`
-      : "Could you tell me more about what you're in the mood for? Perhaps drinks, meals, coffee, dancing, or free attractions?";
-
-    newMessages.push({ role: 'assistant', content: response });
     setConciergeMessages(newMessages);
     setUserInput('');
+    setIsConciergeThinking(true);
+
+    try {
+      // Try Claude AI first
+      const aiResponse = await generateConciergeResponse(userMessage, VENUES_DATA);
+
+      if (aiResponse) {
+        newMessages.push({ role: 'assistant', content: aiResponse });
+      } else {
+        // Fallback to basic search
+        const query = userMessage.toLowerCase();
+        let recommendations: Venue[] = [];
+
+        const scored = VENUES_DATA.map(venue => {
+          let score = 0;
+          const searchableText = `${venue.name} ${venue.description} ${venue.tags.join(' ')} ${venue.category}`.toLowerCase();
+
+          const queryWords = query.split(' ').filter(w => w.length > 2);
+          queryWords.forEach(word => {
+            if (searchableText.includes(word)) score += 10;
+            if (venue.tags.some(tag => tag.toLowerCase().includes(word))) score += 20;
+            if (venue.category.includes(word)) score += 30;
+          });
+
+          return { venue, score };
+        });
+
+        recommendations = scored
+          .filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map(item => item.venue);
+
+        const response = recommendations.length > 0
+          ? `Based on what you're looking for, I'd recommend:\n\n${recommendations.map(v => `• ${v.name} - ${v.description}`).join('\n\n')}`
+          : "Could you tell me more about what you're in the mood for? Perhaps drinks, meals, coffee, dancing, or free attractions?";
+
+        newMessages.push({ role: 'assistant', content: response });
+      }
+    } catch (error) {
+      console.error('Error in concierge response:', error);
+      newMessages.push({
+        role: 'assistant',
+        content: "My apologies, Sir. I seem to be having a moment. Could you please repeat your request?"
+      });
+    }
+
+    setConciergeMessages(newMessages);
+    setIsConciergeThinking(false);
   };
 
   const addToItinerary = (venueId: number) => {
@@ -148,6 +174,8 @@ const App = () => {
         ? prev.filter(id => id !== venueId)
         : [...prev, venueId]
     );
+    // Reset description to trigger regeneration
+    setItineraryDescription('');
   };
 
   const filteredVenues = selectedCategory
@@ -341,11 +369,11 @@ const App = () => {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => window.open(`https://www.openstreetmap.org/directions?from=&to=${selectedVenue.lat}%2C${selectedVenue.lng}#map=16/${selectedVenue.lat}/${selectedVenue.lng}`)}
+                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selectedVenue.lat},${selectedVenue.lng}`, '_blank')}
                   className="flex-1 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 font-bold py-3 sm:py-4 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
                 >
                   <Navigation className="w-5 h-5" />
-                  <span className="text-sm sm:text-base">Directions</span>
+                  <span className="text-sm sm:text-base">Google Maps</span>
                 </button>
                 <button
                   onClick={() => addToItinerary(selectedVenue.id)}
@@ -410,6 +438,14 @@ const App = () => {
                   </div>
                 </div>
               ))}
+              {isConciergeThinking && (
+                <div className="flex justify-start">
+                  <div className="bg-green-50/90 text-green-900 border-2 border-green-900/20 p-3 sm:p-4 rounded-lg shadow-lg flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <p className="text-sm sm:text-base italic">Your butler is thinking...</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -468,7 +504,36 @@ const App = () => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            {/* Claude AI Description with Knightly Scroll Image */}
+            {itinerary.length > 0 && (
+              <div className="relative w-full h-80 overflow-hidden">
+                <img
+                  src={knightlyItinerary}
+                  alt="Itinerary scroll"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                  <div className="max-w-2xl text-center">
+                    {isGeneratingDescription ? (
+                      <div className="flex flex-col items-center gap-4 bg-amber-50/60 backdrop-blur-sm rounded-lg p-6">
+                        <Loader2 className="w-12 h-12 animate-spin text-amber-900" />
+                        <p className="text-amber-900 font-serif italic text-lg">
+                          Your butler is preparing the evening's description...
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50/60 backdrop-blur-sm rounded-lg p-6">
+                        <p className="text-xl md:text-2xl text-amber-900 font-serif italic leading-relaxed">
+                          {itineraryDescription || "Your splendid Edinburgh evening awaits, Sir!"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {showMapView ? (
               // Map View
               <div className="h-full flex flex-col md:flex-row">
@@ -492,12 +557,12 @@ const App = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  window.open(`https://www.openstreetmap.org/directions?from=&to=${venue.lat}%2C${venue.lng}#map=16/${venue.lat}/${venue.lng}`);
+                                  window.open(`https://www.google.com/maps/search/?api=1&query=${venue.lat},${venue.lng}`, '_blank');
                                 }}
                                 className="text-xs px-2 py-1 bg-gradient-to-r from-green-800 to-green-950 text-green-50 rounded hover:from-green-700 hover:to-green-900 transition-colors active:scale-95"
                               >
                                 <Navigation className="w-3 h-3 inline mr-1" />
-                                Navigate
+                                Google Maps
                               </button>
                               <button
                                 onClick={(e) => {
@@ -516,27 +581,94 @@ const App = () => {
                   </div>
                 </div>
 
-                {/* Map Column */}
-                <div className="w-full md:w-3/5 h-1/2 md:h-full relative">
-                  <iframe
-                    className="w-full h-full"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(itineraryVenues[0]?.lng || -3.1983) - 0.02},${(itineraryVenues[0]?.lat || 55.9533) - 0.02},${(itineraryVenues[0]?.lng || -3.1983) + 0.02},${(itineraryVenues[0]?.lat || 55.9533) + 0.02}&layer=mapnik&marker=${itineraryVenues[0]?.lat || 55.9533},${itineraryVenues[0]?.lng || -3.1883}`}
-                  ></iframe>
-                  <div className="absolute bottom-4 left-4 right-4 bg-green-950/90 text-white p-3 rounded-lg backdrop-blur-sm">
-                    <p className="text-xs sm:text-sm">
-                      <strong>Note:</strong> Click below to see all locations with directions
-                    </p>
-                    <button
-                      onClick={() => {
-                        const firstVenue = itineraryVenues[0];
-                        if (firstVenue) {
-                          window.open(`https://www.openstreetmap.org/directions?from=&to=${firstVenue.lat}%2C${firstVenue.lng}#map=14/${firstVenue.lat}/${firstVenue.lng}`);
-                        }
-                      }}
-                      className="mt-2 w-full bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-4 py-2 rounded-lg transition-colors active:scale-95 text-sm"
-                    >
-                      Open in OpenStreetMap
-                    </button>
+                {/* Google Maps Export Column */}
+                <div className="w-full md:w-3/5 h-1/2 md:h-full bg-gradient-to-br from-amber-50 to-amber-100 p-4 overflow-y-auto">
+                  <div className="max-w-2xl mx-auto space-y-4">
+                    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-amber-300">
+                      <h3 className="text-xl font-bold text-amber-900 mb-4 font-serif">
+                        📍 Google Maps Export
+                      </h3>
+                      <p className="text-amber-800 mb-4 text-sm">
+                        Open all {itineraryVenues.length} locations in Google Maps with turn-by-turn directions
+                      </p>
+
+                      {/* Multi-stop directions */}
+                      <button
+                        onClick={() => {
+                          if (itineraryVenues.length === 0) return;
+
+                          // Google Maps multi-stop route format
+                          const waypoints = itineraryVenues
+                            .slice(1, -1) // Middle stops as waypoints
+                            .map(v => `${v.lat},${v.lng}`)
+                            .join('|');
+
+                          const origin = `${itineraryVenues[0].lat},${itineraryVenues[0].lng}`;
+                          const destination = itineraryVenues.length > 1
+                            ? `${itineraryVenues[itineraryVenues.length - 1].lat},${itineraryVenues[itineraryVenues.length - 1].lng}`
+                            : origin;
+
+                          const url = waypoints
+                            ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=walking`
+                            : `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking`;
+
+                          window.open(url, '_blank');
+                        }}
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-lg"
+                      >
+                        <MapIcon className="w-6 h-6" />
+                        <span>Open Route in Google Maps</span>
+                      </button>
+                    </div>
+
+                    {/* Individual locations */}
+                    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-amber-300">
+                      <h3 className="text-lg font-bold text-amber-900 mb-4 font-serif">
+                        Individual Locations
+                      </h3>
+                      <div className="space-y-2">
+                        {itineraryVenues.map((venue, index) => (
+                          <button
+                            key={venue.id}
+                            onClick={() => window.open(
+                              `https://www.google.com/maps/search/?api=1&query=${venue.lat},${venue.lng}`,
+                              '_blank'
+                            )}
+                            className="w-full text-left bg-amber-50 hover:bg-amber-100 p-3 rounded-lg transition-colors flex items-start gap-3 border border-amber-200"
+                          >
+                            <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-green-800 to-green-950 text-green-50 rounded-full flex items-center justify-center text-sm font-bold">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-amber-900 text-sm truncate">{venue.name}</p>
+                              <p className="text-xs text-amber-700">{venue.address}</p>
+                            </div>
+                            <Navigation className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Copy all locations */}
+                    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-amber-300">
+                      <h3 className="text-lg font-bold text-amber-900 mb-3 font-serif">
+                        Export List
+                      </h3>
+                      <button
+                        onClick={() => {
+                          const locationsList = itineraryVenues.map((v, i) =>
+                            `${i + 1}. ${v.name}\n   ${v.address}\n   https://www.google.com/maps/search/?api=1&query=${v.lat},${v.lng}`
+                          ).join('\n\n');
+
+                          navigator.clipboard.writeText(locationsList);
+                          alert('📋 Locations copied to clipboard!');
+                        }}
+                        className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
+                      >
+                        <Copy className="w-5 h-5" />
+                        <span className="text-sm">Copy All Google Maps Links</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -576,12 +708,12 @@ const App = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(`https://www.openstreetmap.org/directions?from=&to=${venue.lat}%2C${venue.lng}#map=16/${venue.lat}/${venue.lng}`);
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${venue.lat},${venue.lng}`, '_blank');
                               }}
                               className="flex-1 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 font-bold py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95 text-sm sm:text-base"
                             >
                               <Navigation className="w-4 h-4 sm:w-5 sm:h-5" />
-                              Navigate
+                              Google Maps
                             </button>
                             <button
                               onClick={(e) => {
@@ -658,11 +790,11 @@ const App = () => {
               </div>
 
               <button
-                onClick={() => window.open(`https://www.openstreetmap.org/directions?from=&to=${selectedVenue.lat}%2C${selectedVenue.lng}#map=16/${selectedVenue.lat}/${selectedVenue.lng}`)}
+                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selectedVenue.lat},${selectedVenue.lng}`, '_blank')}
                 className="w-full bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 font-bold py-3 sm:py-4 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
               >
                 <Navigation className="w-5 h-5" />
-                Get Directions
+                Open in Google Maps
               </button>
             </div>
           </div>
