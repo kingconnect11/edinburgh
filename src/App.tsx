@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List, Loader2, Copy } from 'lucide-react';
+import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List, Loader2, Copy, Hotel, Share2, Download, Image as ImageIcon } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { VENUES_DATA, Venue } from './data/venues';
 import slateBackground from './slate-background.jpeg';
 import scrollBackground from './scroll-background.jpg';
@@ -15,7 +16,8 @@ const CATEGORIES = [
   { id: 'meals', label: 'Meals', icon: Utensils, angle: -30 },
   { id: 'quick-bites', label: 'Quick Bites', icon: Coffee, angle: 0 },
   { id: 'huzz', label: 'Huzz', icon: Music, angle: 30 },
-  { id: 'free', label: 'Free', icon: MapPin, angle: 60 }
+  { id: 'free', label: 'Free', icon: MapPin, angle: 60 },
+  { id: 'hotels', label: 'Hotels', icon: Hotel, angle: 90 }
 ];
 
 const App = () => {
@@ -32,6 +34,8 @@ const App = () => {
 
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const welcomeSoundRef = useRef<HTMLAudioElement | null>(null);
+  const itineraryCardRef = useRef<HTMLDivElement | null>(null);
+  const [isExportingImage, setIsExportingImage] = useState(false);
 
   useEffect(() => {
     // Initialize background music
@@ -178,6 +182,71 @@ const App = () => {
     setItineraryDescription('');
   };
 
+  const exportItineraryAsImage = async () => {
+    if (!itineraryCardRef.current) return;
+
+    setIsExportingImage(true);
+    try {
+      const canvas = await html2canvas(itineraryCardRef.current, {
+        backgroundColor: '#fef3c7',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `edinburgh-itinerary-${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Error exporting image:', error);
+      alert('Failed to export image. Please try again.');
+    } finally {
+      setIsExportingImage(false);
+    }
+  };
+
+  const shareItinerary = async () => {
+    const venues = VENUES_DATA.filter(v => itinerary.includes(v.id));
+
+    if (venues.length === 0) {
+      alert('Add some venues to your itinerary first!');
+      return;
+    }
+
+    const shareText = `Tonight's Edinburgh Itinerary 🎩
+
+${venues.map((v, i) => `${i + 1}. ${v.name}
+   ${v.description}
+   📍 ${v.address}
+   🗺️ https://www.google.com/maps/search/?api=1&query=${v.lat},${v.lng}`).join('\n\n')}
+
+Created with Edinburgh Concierge`;
+
+    // Try native share API first (works on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Tonight's Edinburgh Itinerary",
+          text: shareText
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('📋 Itinerary copied to clipboard!');
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        alert('Failed to share. Please try again.');
+      }
+    }
+  };
+
   const filteredVenues = selectedCategory
     ? VENUES_DATA.filter(v => v.category === selectedCategory)
     : VENUES_DATA;
@@ -233,19 +302,6 @@ const App = () => {
             </div>
           </button>
 
-          {/* Itinerary Button */}
-          {itinerary.length > 0 && (
-            <button
-              onClick={() => setCurrentView('itinerary')}
-              className="absolute bottom-8 right-8 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-full shadow-xl transition-all hover:scale-110 border-2 border-green-950 active:scale-95"
-            >
-              <div className="flex items-center gap-2">
-                <List className="w-5 h-5" />
-                <span className="font-bold">{itinerary.length}</span>
-              </div>
-            </button>
-          )}
-
           {/* Title - Updated text with lower z-index */}
           <div className="absolute top-8 left-1/2 transform -translate-x-1/2 text-center z-0 pointer-events-none">
             <h1 className="text-3xl sm:text-4xl font-bold text-amber-400 mb-2 font-serif drop-shadow-lg">
@@ -253,6 +309,22 @@ const App = () => {
             </h1>
             <p className="text-base sm:text-lg text-slate-300 drop-shadow-md">Dùn Èideann</p>
           </div>
+
+          {/* Tonight's Itinerary Button - Always visible, centered below menu */}
+          <button
+            onClick={() => setCurrentView('itinerary')}
+            className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-8 py-4 rounded-lg shadow-xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95"
+          >
+            <div className="flex items-center gap-3">
+              <List className="w-6 h-6" />
+              <span className="text-lg font-bold font-serif">Tonight's Itinerary</span>
+              {itinerary.length > 0 && (
+                <span className="bg-green-950 px-3 py-1 rounded-full text-sm font-bold">
+                  {itinerary.length}
+                </span>
+              )}
+            </div>
+          </button>
         </div>
       </div>
     );
@@ -392,6 +464,22 @@ const App = () => {
             </div>
           </div>
         )}
+
+        {/* Tonight's Itinerary Button - Sticky bottom */}
+        <button
+          onClick={() => setCurrentView('itinerary')}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
+        >
+          <div className="flex items-center gap-2">
+            <List className="w-5 h-5" />
+            <span className="font-bold font-serif">Tonight's Itinerary</span>
+            {itinerary.length > 0 && (
+              <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
+                {itinerary.length}
+              </span>
+            )}
+          </div>
+        </button>
       </div>
     );
   }
@@ -469,6 +557,22 @@ const App = () => {
             </div>
           </div>
         </div>
+
+        {/* Tonight's Itinerary Button - Fixed position above input */}
+        <button
+          onClick={() => setCurrentView('itinerary')}
+          className="fixed bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
+        >
+          <div className="flex items-center gap-2">
+            <List className="w-5 h-5" />
+            <span className="font-bold font-serif">Tonight's Itinerary</span>
+            {itinerary.length > 0 && (
+              <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
+                {itinerary.length}
+              </span>
+            )}
+          </div>
+        </button>
       </div>
     );
   }
@@ -487,19 +591,48 @@ const App = () => {
               <ChevronLeft className="w-6 h-6" />
               <span className="text-lg font-semibold">Back to Menu</span>
             </button>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-3">
               <h1 className="text-3xl sm:text-4xl font-bold text-amber-100 font-serif">
                 Your Itinerary
               </h1>
-              <button
-                onClick={() => setShowMapView(!showMapView)}
-                className="flex items-center gap-2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-3 sm:px-4 py-2 rounded-lg transition-colors active:scale-95"
-              >
-                {showMapView ? <List className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
-                <span className="text-sm sm:text-base font-bold hidden sm:inline">
-                  {showMapView ? 'List' : 'Map'}
-                </span>
-              </button>
+              <div className="flex gap-2">
+                {itinerary.length > 0 && (
+                  <>
+                    <button
+                      onClick={shareItinerary}
+                      className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
+                      title="Share itinerary"
+                    >
+                      <Share2 className="w-5 h-5" />
+                      <span className="text-sm sm:text-base font-bold hidden sm:inline">Share</span>
+                    </button>
+                    <button
+                      onClick={exportItineraryAsImage}
+                      disabled={isExportingImage}
+                      className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                      title="Export as image"
+                    >
+                      {isExportingImage ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-5 h-5" />
+                      )}
+                      <span className="text-sm sm:text-base font-bold hidden sm:inline">
+                        {isExportingImage ? 'Exporting...' : 'Export'}
+                      </span>
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setShowMapView(!showMapView)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-3 sm:px-4 py-2 rounded-lg transition-colors active:scale-95"
+                >
+                  {showMapView ? <List className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
+                  <span className="text-sm sm:text-base font-bold hidden sm:inline">
+                    {showMapView ? 'List' : 'Map'}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -732,10 +865,11 @@ const App = () => {
 
                   {itineraryVenues.length === 0 && (
                     <div className="text-center py-12">
-                      <p className="text-amber-800 text-lg mb-4">Your itinerary is empty</p>
+                      <h2 className="text-3xl font-bold text-amber-900 mb-3 font-serif">Your night is free, M'Lord</h2>
+                      <p className="text-amber-700 italic mb-6">Perhaps I might suggest exploring our curated establishments?</p>
                       <button
                         onClick={() => setCurrentView('menu')}
-                        className="bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg font-bold transition-colors active:scale-95"
+                        className="bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-8 py-4 rounded-lg font-bold transition-all hover:scale-105 active:scale-95 text-lg"
                       >
                         Explore Venues
                       </button>
@@ -799,6 +933,66 @@ const App = () => {
             </div>
           </div>
         )}
+
+        {/* Hidden Exportable Itinerary Card - Styled for image export */}
+        <div
+          ref={itineraryCardRef}
+          className="fixed -top-[9999px] left-0 w-[600px] bg-gradient-to-br from-amber-50 to-amber-100 p-8 rounded-xl shadow-2xl border-4 border-amber-900"
+        >
+          {/* Header */}
+          <div className="text-center mb-6 border-b-2 border-amber-900 pb-4">
+            <div className="text-5xl mb-2">🎩</div>
+            <h1 className="text-3xl font-bold text-amber-900 font-serif mb-1">
+              Tonight's Edinburgh Itinerary
+            </h1>
+            <p className="text-amber-700 italic">
+              {new Date().toLocaleDateString('en-GB', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
+
+          {/* Venues List */}
+          <div className="space-y-4 mb-6">
+            {itineraryVenues.map((venue, index) => (
+              <div key={venue.id} className="bg-white rounded-lg p-4 border-2 border-amber-300">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-800 to-green-950 text-white rounded-full flex items-center justify-center text-xl font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-amber-900 font-serif mb-1">{venue.name}</h3>
+                    <p className="text-sm text-amber-800 italic mb-2">{venue.description}</p>
+                    <p className="text-xs text-amber-700 mb-1">📍 {venue.address}</p>
+                    <div className="flex gap-2 mt-2">
+                      <span className="text-xs px-2 py-1 bg-amber-200 rounded-full font-bold">
+                        {'£'.repeat(venue.priceRange || 1)}
+                      </span>
+                      {venue.tags.slice(0, 2).map(tag => (
+                        <span key={tag} className="text-xs px-2 py-1 bg-green-100 text-green-900 rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="text-center pt-4 border-t-2 border-amber-300">
+            <p className="text-sm text-amber-700 italic font-serif">
+              "An evening worthy of nobility, Sir."
+            </p>
+            <p className="text-xs text-amber-600 mt-2">
+              Created with Edinburgh Concierge • Dùn Èideann
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

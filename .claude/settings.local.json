@@ -11,7 +11,11 @@
       "Bash(else echo \"File does not exist\")",
       "Bash(fi)",
       "Bash(lsof:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git commit -m \"Complete app with Claude API integration and Vercel deployment setup\n\n- Integrated Claude API for butler/concierge responses\n- Added proxy server for API requests\n- Created Vercel serverless function for deployment\n- Added 118+ Edinburgh venues across all categories\n- Implemented itinerary builder with Google Maps integration\n- Added deployment documentation and troubleshooting guides\n- Ready for production deployment to Vercel\")",
+      "Bash(git push --force-with-lease)",
+      "Bash(npm run build)",
+      "Bash(git add -A)"
     ],
     "deny": [],
     "ask": []

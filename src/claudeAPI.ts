@@ -150,6 +150,8 @@ function getFallbackDescription(venues: Venue[]): string {
     description += "a curated journey through fine dining and craft cocktails";
   } else if (categories.includes('huzz')) {
     description += "an unforgettable night of entertainment and nightlife";
+  } else if (categories.includes('hotels')) {
+    description += "a selection of Edinburgh's finest accommodations";
   } else if (categories.includes('drinks')) {
     description += "a tour of Edinburgh's finest bars and beverage experiences";
   } else if (categories.includes('meals')) {
