@@ -3,9 +3,11 @@ import { Venue } from './data/venues';
 
 const CLAUDE_MODEL = 'claude-sonnet-4-5';
 
-// API endpoint - uses environment variable or defaults to relative path for Vercel
+// API endpoint - uses environment variable or defaults to relative path
 // For local dev with proxy-server.js, set VITE_API_ENDPOINT=http://localhost:3002/api/claude in .env
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/api/claude';
+// For Netlify: /.netlify/functions/claude
+// For Vercel: /api/claude
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/.netlify/functions/claude';
 
 /**
  * Generate an itinerary description using Claude AI
