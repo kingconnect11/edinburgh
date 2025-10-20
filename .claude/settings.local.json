@@ -16,7 +16,10 @@
       "Bash(git push --force-with-lease)",
       "Bash(npm run build)",
       "Bash(git add -A)",
-      "Bash(git commit -m \"Add hotels category and improve itinerary sharing features\n\n- Added hotels category with Hotel icon to circular menu\n- Made ''Tonight''s Itinerary'' button always visible and centered\n- Added itinerary button to Guide and Concierge views\n- Updated empty state to ''Your night is free, M''Lord''\n- Implemented image export feature with butler-themed card design\n- Added native share API support for mobile devices\n- Installed html2canvas for itinerary image export\n- Created hotel venue template guide for easy additions\n- Enhanced itinerary page with Share and Export buttons\n- Improved user experience across all views\")"
+      "Bash(git commit -m \"Add hotels category and improve itinerary sharing features\n\n- Added hotels category with Hotel icon to circular menu\n- Made ''Tonight''s Itinerary'' button always visible and centered\n- Added itinerary button to Guide and Concierge views\n- Updated empty state to ''Your night is free, M''Lord''\n- Implemented image export feature with butler-themed card design\n- Added native share API support for mobile devices\n- Installed html2canvas for itinerary image export\n- Created hotel venue template guide for easy additions\n- Enhanced itinerary page with Share and Export buttons\n- Improved user experience across all views\")",
+      "Bash(cat package.json)",
+      "Bash(vercel --prod --force)",
+      "Bash(git commit -m \"Fix API endpoint configuration for Vercel deployment\")"
     ],
     "deny": [],
     "ask": []
