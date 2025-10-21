@@ -100,16 +100,33 @@ const App = () => {
 
   // Helper: Extract venue IDs from text by matching venue names
   const extractVenueIdsFromText = (text: string): number[] => {
-    const lowerText = text.toLowerCase();
+    // Strip markdown formatting (**, __, etc.)
+    const cleanedText = text.replace(/\*\*/g, '').replace(/__/g, '');
+    const lowerText = cleanedText.toLowerCase();
     const foundVenueIds: number[] = [];
 
     VENUES_DATA.forEach(venue => {
-      // Check if venue name appears in the text (case-insensitive)
-      if (lowerText.includes(venue.name.toLowerCase())) {
+      const venueName = venue.name.toLowerCase();
+
+      // Extract the core name (before any dashes, parentheses, or "at")
+      // e.g., "Oink (Victoria Street)" -> "oink"
+      // e.g., "The Balmoral - Number One" -> "the balmoral"
+      const coreNameMatch = venueName.split(/[-(\uff08]|at /)[0].trim();
+
+      // Check multiple matching strategies:
+      // 1. Full venue name appears in text
+      // 2. Text contains the core venue name
+      // 3. Core name from text matches core name of venue
+      const fullMatch = lowerText.includes(venueName);
+      const coreMatch = lowerText.includes(coreNameMatch);
+
+      if (fullMatch || coreMatch) {
         foundVenueIds.push(venue.id);
+        console.log(`✅ Found venue: ${venue.name} (ID: ${venue.id}) via ${fullMatch ? 'full' : 'core'} match`);
       }
     });
 
+    console.log(`📍 Extracted ${foundVenueIds.length} venues from text:`, foundVenueIds);
     return foundVenueIds;
   };
 
@@ -138,7 +155,9 @@ const App = () => {
       'great'
     ];
 
-    return confirmationPhrases.some(phrase => lowerMessage.includes(phrase));
+    const isConfirm = confirmationPhrases.some(phrase => lowerMessage.includes(phrase));
+    console.log(`🔍 Checking if "${message}" is confirmation: ${isConfirm}`);
+    return isConfirm;
   };
 
   const handleCategorySelect = (categoryId: string) => {
@@ -187,10 +206,13 @@ const App = () => {
         // Extract venue IDs from the AI response and add to recommended venues
         const venueIds = extractVenueIdsFromText(aiResponse);
         if (venueIds.length > 0) {
+          console.log(`🎯 Adding ${venueIds.length} venues to recommended list`);
           setRecommendedVenues(prev => {
             // Add new venues, avoiding duplicates
             const combined = [...prev, ...venueIds];
-            return Array.from(new Set(combined));
+            const uniqueVenues = Array.from(new Set(combined));
+            console.log(`📋 Total recommended venues now: ${uniqueVenues.length}`, uniqueVenues);
+            return uniqueVenues;
           });
         }
       } else {
@@ -245,12 +267,17 @@ const App = () => {
     setIsConciergeThinking(false);
 
     // If user confirmed and we have recommended venues, add them to itinerary and switch views
+    console.log(`🎬 Checking confirmation trigger: isConfirming=${isUserConfirming}, recommendedVenues=${recommendedVenues.length}`);
     if (isUserConfirming && recommendedVenues.length > 0) {
+      console.log(`✨ Confirmation detected! Adding ${recommendedVenues.length} venues to itinerary in 1.5s...`);
       // Wait a moment for the user to see the butler's farewell message
       setTimeout(() => {
+        console.log(`🎉 Adding venues to itinerary and switching view:`, recommendedVenues);
         setItinerary(prev => {
           const combined = [...prev, ...recommendedVenues];
-          return Array.from(new Set(combined));
+          const uniqueItinerary = Array.from(new Set(combined));
+          console.log(`📝 Itinerary updated to:`, uniqueItinerary);
+          return uniqueItinerary;
         });
         setRecommendedVenues([]);
         setCurrentView('itinerary');
