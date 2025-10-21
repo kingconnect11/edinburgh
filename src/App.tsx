@@ -37,6 +37,7 @@ const App = () => {
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const welcomeSoundRef = useRef<HTMLAudioElement | null>(null);
   const itineraryCardRef = useRef<HTMLDivElement | null>(null);
+  const recommendedVenuesRef = useRef<number[]>([]);
   const [isExportingImage, setIsExportingImage] = useState(false);
 
   useEffect(() => {
@@ -95,6 +96,7 @@ const App = () => {
   useEffect(() => {
     if (currentView !== 'concierge') {
       setRecommendedVenues([]);
+      recommendedVenuesRef.current = [];
     }
   }, [currentView]);
 
@@ -241,9 +243,13 @@ const App = () => {
     setUserInput('');
 
     // HYBRID APPROACH: Check for confirmation locally first
-    if (isUserConfirming && recommendedVenues.length > 0) {
+    // Use REF instead of state to avoid React closure timing issues
+    const venuesToConfirm = recommendedVenuesRef.current;
+    console.log(`🔍 Confirmation check: isConfirming=${isUserConfirming}, refLength=${venuesToConfirm.length}, stateLength=${recommendedVenues.length}`);
+
+    if (isUserConfirming && venuesToConfirm.length > 0) {
       // Handle confirmation locally WITHOUT calling API (faster + cheaper)
-      console.log(`✨ Local confirmation detected! Adding ${recommendedVenues.length} venues to itinerary...`);
+      console.log(`✨ Local confirmation detected! Adding ${venuesToConfirm.length} venues to itinerary...`);
 
       // Generate a butler-style farewell message locally
       const farewells = [
@@ -260,14 +266,15 @@ const App = () => {
 
       // Add venues to itinerary and switch view after brief delay
       setTimeout(() => {
-        console.log(`🎉 Adding ${recommendedVenues.length} venues to itinerary:`, recommendedVenues);
+        console.log(`🎉 Adding ${venuesToConfirm.length} venues to itinerary:`, venuesToConfirm);
         setItinerary(prev => {
-          const combined = [...prev, ...recommendedVenues];
+          const combined = [...prev, ...venuesToConfirm];
           const uniqueItinerary = Array.from(new Set(combined));
           console.log(`📝 Itinerary updated to:`, uniqueItinerary);
           return uniqueItinerary;
         });
         setRecommendedVenues([]);
+        recommendedVenuesRef.current = []; // Clear ref too
         setCurrentView('itinerary');
       }, 1500);
 
@@ -294,8 +301,9 @@ const App = () => {
           allRecommendedVenues = Array.from(new Set(allRecommendedVenues)); // Remove duplicates
           console.log(`📋 Total recommended venues now: ${allRecommendedVenues.length}`, allRecommendedVenues);
 
-          // Update state
+          // Update state AND ref
           setRecommendedVenues(allRecommendedVenues);
+          recommendedVenuesRef.current = allRecommendedVenues;
         }
       } else {
         // Fallback to basic search
@@ -334,6 +342,7 @@ const App = () => {
           allRecommendedVenues = [...allRecommendedVenues, ...venueIds];
           allRecommendedVenues = Array.from(new Set(allRecommendedVenues));
           setRecommendedVenues(allRecommendedVenues);
+          recommendedVenuesRef.current = allRecommendedVenues;
         }
       }
     } catch (error) {
@@ -346,6 +355,38 @@ const App = () => {
 
     setConciergeMessages(newMessages);
     setIsConciergeThinking(false);
+  };
+
+  const handleConfirmVenues = () => {
+    const venuesToAdd = recommendedVenuesRef.current;
+    console.log(`🎯 Manual confirmation button clicked! Adding ${venuesToAdd.length} venues to itinerary:`, venuesToAdd);
+
+    if (venuesToAdd.length === 0) return;
+
+    // Add farewell message to chat
+    const farewells = [
+      "Excellent choice, My Lord! Your evening's itinerary has been prepared. May your night be filled with splendid adventures and questionable decisions. Sláinte mhath!",
+      "Splendid! Your itinerary awaits, Sir. Do try not to embarrass the family name too terribly. *Tha mi an dòchas gun còrd e riut* - I hope you enjoy it!",
+      "Very good, My Lord. The arrangements have been made. I trust you'll conduct yourself with at least a modicum of dignity. Or not. *Slàinte!*",
+      "As you wish, Sir! Tonight's adventure is set. Remember, what happens in Dùn Èideann stays in Dùn Èideann... unless you're photographed.",
+      "Perfect! Your evening is secured, M'Lord. I've taken the liberty of pre-booking bail, just in case. *Beannachd leat!* - Farewell!"
+    ];
+    const farewellMessage = farewells[Math.floor(Math.random() * farewells.length)];
+
+    setConciergeMessages(prev => [...prev, { role: 'assistant', content: farewellMessage }]);
+
+    // Add venues to itinerary and switch view
+    setTimeout(() => {
+      setItinerary(prev => {
+        const combined = [...prev, ...venuesToAdd];
+        const uniqueItinerary = Array.from(new Set(combined));
+        console.log(`📝 Itinerary updated via button to:`, uniqueItinerary);
+        return uniqueItinerary;
+      });
+      setRecommendedVenues([]);
+      recommendedVenuesRef.current = [];
+      setCurrentView('itinerary');
+    }, 1500);
   };
 
   const addToItinerary = (venueId: number) => {
@@ -726,6 +767,20 @@ Created with Edinburgh Concierge`;
               )}
             </div>
           </div>
+
+          {/* Confirm Button - Shows when venues are recommended */}
+          {recommendedVenues.length > 0 && (
+            <div className="px-4 sm:px-6 pb-4">
+              <div className="max-w-4xl mx-auto">
+                <button
+                  onClick={handleConfirmVenues}
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-bold py-4 px-6 rounded-lg shadow-2xl transition-all hover:scale-105 active:scale-95 animate-pulse border-2 border-amber-700 flex items-center justify-center gap-3"
+                >
+                  <span className="text-lg sm:text-xl">✓ Add These {recommendedVenues.length} Venues to My Itinerary</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="bg-gradient-to-t from-black/60 to-transparent p-4 sm:p-6 backdrop-blur-sm">
