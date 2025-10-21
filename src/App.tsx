@@ -234,7 +234,7 @@ const App = () => {
     if (conciergeMessages.length === 0) {
       setConciergeMessages([{
         role: 'assistant',
-        content: "Fàilte Lord Lord! I'm your Edinburgh concierge, here to serve your every whim and desire. What kind of experience are you looking for today? I can recommend from our curated collection of the city's finest establishments. Shall I procure some whoores for this evening's activities?"
+        content: "Fàilte Lord Lord! I'm your Edinburgh concierge, here to serve your every whim and desire. What kind of experience are you looking for today? I can recommend from our curated collection of the city's finest establishments. What kind of debauchery are we getting up to tonight My Lord?"
       }]);
     }
   };
@@ -377,7 +377,7 @@ const App = () => {
     // Add farewell message to chat
     const farewells = [
       "Excellent choice, My Lord! Your evening's itinerary has been prepared. May your night be filled with splendid adventures and questionable decisions. Sláinte mhath!",
-      "Splendid! Your itinerary awaits, Sir. Do try not to embarrass the family name too terribly. *Tha mi an dòchas gun còrd e riut* - I hope you enjoy it!",
+      "Quite the plan! Your itinerary awaits, Sir. Do try not to embarrass the family name too terribly. *Tha mi an dòchas gun còrd e riut* - I hope you enjoy it!",
       "Very good, My Lord. The arrangements have been made. I trust you'll conduct yourself with at least a modicum of dignity. Or not. *Slàinte!*",
       "As you wish, Sir! Tonight's adventure is set. Remember, what happens in Dùn Èideann stays in Dùn Èideann... unless you're photographed.",
       "Perfect! Your evening is secured, M'Lord. I've taken the liberty of pre-booking bail, just in case. *Beannachd leat!* - Farewell!"
@@ -964,17 +964,17 @@ Created with Edinburgh Concierge`;
                   alt="Itinerary scroll"
                   className="w-full h-full object-cover min-h-96"
                 />
-                <div className="absolute inset-0 flex items-center justify-center p-12">
-                  <div className="max-w-3xl text-center overflow-y-auto">
+                <div className="absolute inset-0 flex items-center justify-center pt-24 px-12 pb-12">
+                  <div className="max-w-2xl text-center overflow-y-auto">
                     {isGeneratingDescription ? (
                       <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="w-12 h-12 animate-spin text-amber-900" />
-                        <p className="text-amber-900 font-serif italic text-lg">
+                        <Loader2 className="w-12 h-12 animate-spin text-amber-50" />
+                        <p className="text-amber-50 font-serif italic text-lg">
                           Your butler is preparing the evening's description...
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xl md:text-2xl text-amber-900 font-serif italic leading-relaxed">
+                      <p className="text-xl md:text-2xl text-amber-50 font-serif italic leading-relaxed">
                         {itineraryDescription || "Your splendid Edinburgh evening awaits, Sir!"}
                       </p>
                     )}
