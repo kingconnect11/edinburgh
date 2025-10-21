@@ -6,18 +6,19 @@ import slateBackground from './slate-background.jpeg';
 import scrollBackground from './scroll-background.jpg';
 import leatherBook from './leather-book.png';
 import knightlyItinerary from './knightly_itinerary.png';
+import lordLordKyle from './lord-lord-Kyle.svg';
 import backgroundMusic from './background.mp3';
 import conciergeWelcome from './concierge-welcome.mp3';
 import conciergeIcon from './SVG_Butler_Good.svg';
 import { generateItineraryWithClaude, generateConciergeResponse } from './claudeAPI';
 
 const CATEGORIES = [
-  { id: 'drinks', label: 'Drinks', icon: Wine, angle: -60 },
-  { id: 'meals', label: 'Meals', icon: Utensils, angle: -30 },
-  { id: 'quick-bites', label: 'Quick Bites', icon: Coffee, angle: 0 },
-  { id: 'huzz', label: 'Huzz', icon: Music, angle: 30 },
-  { id: 'free', label: 'Free', icon: MapPin, angle: 60 },
-  { id: 'hotels', label: 'Hotels', icon: Hotel, angle: 90 }
+  { id: 'drinks', label: 'Drinks', icon: Wine, angle: -75 },
+  { id: 'meals', label: 'Meals', icon: Utensils, angle: -45 },
+  { id: 'quick-bites', label: 'Quick Bites', icon: Coffee, angle: -15 },
+  { id: 'huzz', label: 'Huzz', icon: Music, angle: 15 },
+  { id: 'free', label: 'Free', icon: MapPin, angle: 45 },
+  { id: 'hotels', label: 'Hotels', icon: Hotel, angle: 75 }
 ];
 
 const App = () => {
@@ -316,7 +317,7 @@ Created with Edinburgh Concierge`;
             className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-8 py-4 rounded-lg shadow-xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95"
           >
             <div className="flex items-center gap-3">
-              <List className="w-6 h-6" />
+              <img src={lordLordKyle} alt="Lord Lord" className="w-8 h-8 rounded-full border-2 border-green-50" />
               <span className="text-lg font-bold font-serif">Tonight's Itinerary</span>
               {itinerary.length > 0 && (
                 <span className="bg-green-950 px-3 py-1 rounded-full text-sm font-bold">
@@ -471,7 +472,7 @@ Created with Edinburgh Concierge`;
           className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
         >
           <div className="flex items-center gap-2">
-            <List className="w-5 h-5" />
+            <img src={lordLordKyle} alt="Lord Lord" className="w-6 h-6 rounded-full border-2 border-green-50" />
             <span className="font-bold font-serif">Tonight's Itinerary</span>
             {itinerary.length > 0 && (
               <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
@@ -564,7 +565,7 @@ Created with Edinburgh Concierge`;
           className="fixed bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
         >
           <div className="flex items-center gap-2">
-            <List className="w-5 h-5" />
+            <img src={lordLordKyle} alt="Lord Lord" className="w-6 h-6 rounded-full border-2 border-green-50" />
             <span className="font-bold font-serif">Tonight's Itinerary</span>
             {itinerary.length > 0 && (
               <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
@@ -592,9 +593,12 @@ Created with Edinburgh Concierge`;
               <span className="text-lg font-semibold">Back to Menu</span>
             </button>
             <div className="flex justify-between items-center flex-wrap gap-3">
-              <h1 className="text-3xl sm:text-4xl font-bold text-amber-100 font-serif">
-                Your Itinerary
-              </h1>
+              <div className="flex items-center gap-3">
+                <img src={lordLordKyle} alt="Lord Lord" className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-amber-100" />
+                <h1 className="text-3xl sm:text-4xl font-bold text-amber-100 font-serif">
+                  Your Itinerary
+                </h1>
+              </div>
               <div className="flex gap-2">
                 {itinerary.length > 0 && (
                   <>
@@ -640,14 +644,14 @@ Created with Edinburgh Concierge`;
           <div className="flex-1 overflow-y-auto">
             {/* Claude AI Description with Knightly Scroll Image */}
             {itinerary.length > 0 && (
-              <div className="relative w-full h-80 overflow-hidden">
+              <div className="relative w-full min-h-96 h-auto overflow-visible">
                 <img
                   src={knightlyItinerary}
                   alt="Itinerary scroll"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover min-h-96"
                 />
                 <div className="absolute inset-0 flex items-center justify-center p-8">
-                  <div className="max-w-2xl text-center">
+                  <div className="max-w-2xl text-center max-h-80 overflow-y-auto">
                     {isGeneratingDescription ? (
                       <div className="flex flex-col items-center gap-4 bg-amber-50/60 backdrop-blur-sm rounded-lg p-6">
                         <Loader2 className="w-12 h-12 animate-spin text-amber-900" />
@@ -941,7 +945,9 @@ Created with Edinburgh Concierge`;
         >
           {/* Header */}
           <div className="text-center mb-6 border-b-2 border-amber-900 pb-4">
-            <div className="text-5xl mb-2">🎩</div>
+            <div className="flex justify-center mb-2">
+              <img src={lordLordKyle} alt="Lord Lord" className="w-20 h-20 rounded-full border-4 border-amber-900" />
+            </div>
             <h1 className="text-3xl font-bold text-amber-900 font-serif mb-1">
               Tonight's Edinburgh Itinerary
             </h1>
