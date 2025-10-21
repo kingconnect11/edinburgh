@@ -83,9 +83,15 @@ export async function generateConciergeResponse(
   console.log('📊 Number of venues:', venues.length);
   console.log('💬 Conversation history length:', conversationHistory.length);
 
-  const venuesList = venues.map(v =>
-    `- ${v.name} (${v.category}${v.tags.length > 0 ? ': ' + v.tags.slice(0, 3).join(', ') : ''})`
-  ).join('\n');
+  // Only send full venue list on FIRST message, compact summary after to save tokens
+  const isFirstMessage = conversationHistory.length <= 2;
+  console.log('🎯 First message?', isFirstMessage);
+
+  const venuesList = isFirstMessage
+    ? venues.map(v => `- ${v.name} (${v.category})`).join('\n')  // Simplified format without tags
+    : `[You have access to all ${venues.length} venues from our previous exchange - ${venues.filter(v => v.category === 'drinks').length} drinks, ${venues.filter(v => v.category === 'meals').length} meals, ${venues.filter(v => v.category === 'quick-bites').length} quick-bites, ${venues.filter(v => v.category === 'hotels').length} hotels, ${venues.filter(v => v.category === 'huzz').length} huzz, ${venues.filter(v => v.category === 'free').length} free venues]`;
+
+  console.log('📝 Venue list length:', venuesList.length, 'characters');
 
   const systemPrompt = `You are a witty British butler/concierge for Lord Lord in Edinburgh. Personality: impeccably polite with dry humor, subtle sarcasm, and aristocratic formality. Not afraid to be cheeky or inappropriate when contextually fitting. Sprinkle in Scottish/Gaelic phrases.
 
