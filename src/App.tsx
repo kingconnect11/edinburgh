@@ -925,6 +925,18 @@ Created with Edinburgh Concierge`;
                       <span className="text-sm sm:text-base font-bold hidden sm:inline">Share</span>
                     </button>
                     <button
+                      onClick={() => {
+                        const desc = itineraryDescription || "Your splendid Edinburgh evening awaits, Sir!";
+                        navigator.clipboard.writeText(desc);
+                        alert('📋 Description copied to clipboard!');
+                      }}
+                      className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
+                      title="Copy description"
+                    >
+                      <Copy className="w-5 h-5" />
+                      <span className="text-sm sm:text-base font-bold hidden sm:inline">Copy</span>
+                    </button>
+                    <button
                       onClick={exportItineraryAsImage}
                       disabled={isExportingImage}
                       className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
@@ -1258,7 +1270,9 @@ Created with Edinburgh Concierge`;
           {/* Header */}
           <div className="text-center mb-6 border-b-2 border-amber-900 pb-4">
             <div className="flex justify-center mb-2">
-              <img src={lordLordKyle} alt="Lord Lord" className="w-40 h-40 rounded-full border-4 border-amber-900" />
+              <div className="w-40 h-40 rounded-full bg-white border-4 border-amber-900 flex items-center justify-center p-2">
+                <img src={lordLordKyle} alt="Lord Lord" className="w-full h-full object-contain" />
+              </div>
             </div>
             <h1 className="text-3xl font-bold text-amber-900 font-serif mb-1">
               Tonight's Edinburgh Itinerary
