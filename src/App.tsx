@@ -149,6 +149,8 @@ const App = () => {
       'sure',
       'absolutely',
       'definitely',
+      'confirmed',
+      'confirm',
       'i\'m in',
       'let\'s do that',
       'that works',
@@ -196,6 +198,9 @@ const App = () => {
     setUserInput('');
     setIsConciergeThinking(true);
 
+    // Track all recommended venues locally (start with current state)
+    let allRecommendedVenues = [...recommendedVenues];
+
     try {
       // Try Claude AI first
       const aiResponse = await generateConciergeResponse(userMessage, VENUES_DATA);
@@ -203,17 +208,17 @@ const App = () => {
       if (aiResponse) {
         newMessages.push({ role: 'assistant', content: aiResponse });
 
-        // Extract venue IDs from the AI response and add to recommended venues
+        // Extract venue IDs from the AI response
         const venueIds = extractVenueIdsFromText(aiResponse);
         if (venueIds.length > 0) {
           console.log(`🎯 Adding ${venueIds.length} venues to recommended list`);
-          setRecommendedVenues(prev => {
-            // Add new venues, avoiding duplicates
-            const combined = [...prev, ...venueIds];
-            const uniqueVenues = Array.from(new Set(combined));
-            console.log(`📋 Total recommended venues now: ${uniqueVenues.length}`, uniqueVenues);
-            return uniqueVenues;
-          });
+          // Add to local tracking
+          allRecommendedVenues = [...allRecommendedVenues, ...venueIds];
+          allRecommendedVenues = Array.from(new Set(allRecommendedVenues)); // Remove duplicates
+          console.log(`📋 Total recommended venues now: ${allRecommendedVenues.length}`, allRecommendedVenues);
+
+          // Update state
+          setRecommendedVenues(allRecommendedVenues);
         }
       } else {
         // Fallback to basic search
@@ -249,10 +254,9 @@ const App = () => {
         // Add recommended venues from fallback
         if (recommendations.length > 0) {
           const venueIds = recommendations.map(v => v.id);
-          setRecommendedVenues(prev => {
-            const combined = [...prev, ...venueIds];
-            return Array.from(new Set(combined));
-          });
+          allRecommendedVenues = [...allRecommendedVenues, ...venueIds];
+          allRecommendedVenues = Array.from(new Set(allRecommendedVenues));
+          setRecommendedVenues(allRecommendedVenues);
         }
       }
     } catch (error) {
@@ -267,14 +271,15 @@ const App = () => {
     setIsConciergeThinking(false);
 
     // If user confirmed and we have recommended venues, add them to itinerary and switch views
-    console.log(`🎬 Checking confirmation trigger: isConfirming=${isUserConfirming}, recommendedVenues=${recommendedVenues.length}`);
-    if (isUserConfirming && recommendedVenues.length > 0) {
-      console.log(`✨ Confirmation detected! Adding ${recommendedVenues.length} venues to itinerary in 1.5s...`);
+    // Use LOCAL variable allRecommendedVenues, not state!
+    console.log(`🎬 Checking confirmation trigger: isConfirming=${isUserConfirming}, allRecommendedVenues=${allRecommendedVenues.length}`);
+    if (isUserConfirming && allRecommendedVenues.length > 0) {
+      console.log(`✨ Confirmation detected! Adding ${allRecommendedVenues.length} venues to itinerary in 1.5s...`);
       // Wait a moment for the user to see the butler's farewell message
       setTimeout(() => {
-        console.log(`🎉 Adding venues to itinerary and switching view:`, recommendedVenues);
+        console.log(`🎉 Adding venues to itinerary and switching view:`, allRecommendedVenues);
         setItinerary(prev => {
-          const combined = [...prev, ...recommendedVenues];
+          const combined = [...prev, ...allRecommendedVenues];
           const uniqueItinerary = Array.from(new Set(combined));
           console.log(`📝 Itinerary updated to:`, uniqueItinerary);
           return uniqueItinerary;
