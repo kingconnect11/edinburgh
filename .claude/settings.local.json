@@ -25,7 +25,13 @@
       "Bash(mkdir -p netlify/functions)",
       "Bash(cp api/claude.js netlify/functions/claude.js)",
       "Bash(git commit -m \"Add Netlify support with serverless functions\")",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git add netlify/functions/claude.js)",
+      "Bash(git commit -m \"Fix Netlify function format for proper serverless deployment\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRefine concierge bot AI instructions and add Lord Lord avatar\n\n- Optimized Claude API prompts to reduce token usage by ~50%\n- Enhanced concierge bot with follow-up question logic and confirmation detection\n- Added instructions for handling off-list venue requests\n- Fixed itinerary description window to expand and show full responses\n- Fixed home menu category angles for perfect semicircle symmetry\n- Added Lord Lord (Kyle) avatar to all itinerary buttons, view header, and export cards\n- Improved itinerary generation with venue names, tags, and descriptions\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
