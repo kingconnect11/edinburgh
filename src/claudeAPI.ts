@@ -73,25 +73,27 @@ Be concise but full of personality. Address your master appropriately.`;
 }
 
 /**
- * Generate a concierge chat response using Claude AI
+ * Generate a concierge chat response using Claude AI with full conversation history
  */
-export async function generateConciergeResponse(userMessage: string, venues: Venue[]): Promise<string> {
+export async function generateConciergeResponse(
+  conversationHistory: Array<{role: string, content: string}>,
+  venues: Venue[]
+): Promise<string> {
   console.log('🔍 generateConciergeResponse called');
   console.log('📊 Number of venues:', venues.length);
+  console.log('💬 Conversation history length:', conversationHistory.length);
 
   const venuesList = venues.map(v =>
     `- ${v.name} (${v.category}${v.tags.length > 0 ? ': ' + v.tags.slice(0, 3).join(', ') : ''})`
   ).join('\n');
 
-  const prompt = `You are a witty British butler/concierge for Lord Lord in Edinburgh. Personality: impeccably polite with dry humor, subtle sarcasm, and aristocratic formality. Not afraid to be cheeky or inappropriate when contextually fitting. Sprinkle in Scottish/Gaelic phrases.
+  const systemPrompt = `You are a witty British butler/concierge for Lord Lord in Edinburgh. Personality: impeccably polite with dry humor, subtle sarcasm, and aristocratic formality. Not afraid to be cheeky or inappropriate when contextually fitting. Sprinkle in Scottish/Gaelic phrases.
 
 Approved establishments:
 ${venuesList}
 
-User: "${userMessage}"
-
 GUIDELINES:
-1. RECOMMENDATIONS: Suggest 2-3 matching venues. Keep responses 2-5 sentences.
+1. RECOMMENDATIONS: Suggest 2-3 matching venues FROM THE LIST ABOVE. Keep responses 2-5 sentences. Always include the EXACT venue names from the list.
 
 2. FOLLOW-UPS: Interpret next logical steps (e.g., cocktail bar for date → romantic restaurant → hotel with cheeky comment). Make it natural, not forced.
 
@@ -105,7 +107,14 @@ GUIDELINES:
 
 Address them as "My Lord", "Sir", or "M'Lord".`;
 
-  console.log('📝 Prompt length:', prompt.length);
+  // Build messages array: system prompt + conversation history
+  const messages = [
+    { role: 'user', content: systemPrompt },
+    { role: 'assistant', content: 'Understood, My Lord. I am ready to serve as your Edinburgh concierge.' },
+    ...conversationHistory.slice(1) // Skip the initial welcome message from history
+  ];
+
+  console.log('📝 Total messages being sent:', messages.length);
 
   try {
     console.log('🌐 Making fetch request to API...');
@@ -118,10 +127,7 @@ Address them as "My Lord", "Sir", or "M'Lord".`;
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
+        messages: messages
       })
     });
 

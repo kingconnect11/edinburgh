@@ -7,7 +7,7 @@ import scrollBackground from './scroll-background.jpg';
 import leatherBook from './leather-book.png';
 import knightlyItinerary from './knightly_itinerary.png';
 import lordLordKyle from './lord-lord-Kyle.svg';
-import backgroundMusic from './background.mp3';
+import backgroundMusic from './background1.mp3';
 import conciergeWelcome from './concierge-welcome.mp3';
 import conciergeIcon from './SVG_Butler_Good.svg';
 import { generateItineraryWithClaude, generateConciergeResponse } from './claudeAPI';
@@ -141,20 +141,63 @@ const App = () => {
       'sounds perfect',
       'let\'s do it',
       'let\'s go',
+      'lets do it',
+      'lets go',
       'sounds like a plan',
       'perfect',
       'yes',
       'yeah',
       'yep',
+      'yup',
       'sure',
       'absolutely',
       'definitely',
       'confirmed',
       'confirm',
       'i\'m in',
+      'im in',
+      'i\'m down',
+      'im down',
       'let\'s do that',
+      'lets do that',
+      'let\'s do those',
+      'lets do those',
       'that works',
-      'great'
+      'that\'ll work',
+      'thatll work',
+      'works for me',
+      'great',
+      'excellent',
+      'splendid',
+      'wonderful',
+      'i\'ll go',
+      'ill go',
+      'i\'ll take',
+      'ill take',
+      'go with',
+      'i\'ll go with',
+      'ill go with',
+      'take them',
+      'i\'ll take them',
+      'ill take them',
+      'book them',
+      'book it',
+      'book those',
+      'make it happen',
+      'do it',
+      'agreed',
+      'i agree',
+      'deal',
+      'done',
+      'approved',
+      'i concur',
+      'concur',
+      'go ahead',
+      'proceed',
+      'your suggestions',
+      'your recommendations',
+      'what you suggested',
+      'what you recommended'
     ];
 
     const isConfirm = confirmationPhrases.some(phrase => lowerMessage.includes(phrase));
@@ -196,14 +239,48 @@ const App = () => {
 
     setConciergeMessages(newMessages);
     setUserInput('');
-    setIsConciergeThinking(true);
 
-    // Track all recommended venues locally (start with current state)
+    // HYBRID APPROACH: Check for confirmation locally first
+    if (isUserConfirming && recommendedVenues.length > 0) {
+      // Handle confirmation locally WITHOUT calling API (faster + cheaper)
+      console.log(`✨ Local confirmation detected! Adding ${recommendedVenues.length} venues to itinerary...`);
+
+      // Generate a butler-style farewell message locally
+      const farewells = [
+        "Excellent choice, My Lord! Your evening's itinerary has been prepared. May your night be filled with splendid adventures and questionable decisions. Sláinte mhath!",
+        "Splendid! Your itinerary awaits, Sir. Do try not to embarrass the family name too terribly. *Tha mi an dòchas gun còrd e riut* - I hope you enjoy it!",
+        "Very good, My Lord. The arrangements have been made. I trust you'll conduct yourself with at least a modicum of dignity. Or not. *Slàinte!*",
+        "As you wish, Sir! Tonight's adventure is set. Remember, what happens in Dùn Èideann stays in Dùn Èideann... unless you're photographed.",
+        "Perfect! Your evening is secured, M'Lord. I've taken the liberty of pre-booking bail, just in case. *Beannachd leat!* - Farewell!"
+      ];
+      const farewellMessage = farewells[Math.floor(Math.random() * farewells.length)];
+
+      const messagesWithFarewell = [...newMessages, { role: 'assistant', content: farewellMessage }];
+      setConciergeMessages(messagesWithFarewell);
+
+      // Add venues to itinerary and switch view after brief delay
+      setTimeout(() => {
+        console.log(`🎉 Adding ${recommendedVenues.length} venues to itinerary:`, recommendedVenues);
+        setItinerary(prev => {
+          const combined = [...prev, ...recommendedVenues];
+          const uniqueItinerary = Array.from(new Set(combined));
+          console.log(`📝 Itinerary updated to:`, uniqueItinerary);
+          return uniqueItinerary;
+        });
+        setRecommendedVenues([]);
+        setCurrentView('itinerary');
+      }, 1500);
+
+      return; // Exit early - no API call needed!
+    }
+
+    // NOT a confirmation or no venues - proceed with AI conversation
+    setIsConciergeThinking(true);
     let allRecommendedVenues = [...recommendedVenues];
 
     try {
-      // Try Claude AI first
-      const aiResponse = await generateConciergeResponse(userMessage, VENUES_DATA);
+      // Call Claude AI with FULL conversation history
+      const aiResponse = await generateConciergeResponse(newMessages, VENUES_DATA);
 
       if (aiResponse) {
         newMessages.push({ role: 'assistant', content: aiResponse });
@@ -269,25 +346,6 @@ const App = () => {
 
     setConciergeMessages(newMessages);
     setIsConciergeThinking(false);
-
-    // If user confirmed and we have recommended venues, add them to itinerary and switch views
-    // Use LOCAL variable allRecommendedVenues, not state!
-    console.log(`🎬 Checking confirmation trigger: isConfirming=${isUserConfirming}, allRecommendedVenues=${allRecommendedVenues.length}`);
-    if (isUserConfirming && allRecommendedVenues.length > 0) {
-      console.log(`✨ Confirmation detected! Adding ${allRecommendedVenues.length} venues to itinerary in 1.5s...`);
-      // Wait a moment for the user to see the butler's farewell message
-      setTimeout(() => {
-        console.log(`🎉 Adding venues to itinerary and switching view:`, allRecommendedVenues);
-        setItinerary(prev => {
-          const combined = [...prev, ...allRecommendedVenues];
-          const uniqueItinerary = Array.from(new Set(combined));
-          console.log(`📝 Itinerary updated to:`, uniqueItinerary);
-          return uniqueItinerary;
-        });
-        setRecommendedVenues([]);
-        setCurrentView('itinerary');
-      }, 1500);
-    }
   };
 
   const addToItinerary = (venueId: number) => {
@@ -431,7 +489,9 @@ Created with Edinburgh Concierge`;
           {/* Tonight's Itinerary Button - Always visible, centered below menu */}
           <button
             onClick={() => setCurrentView('itinerary')}
-            className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-8 py-4 rounded-lg shadow-xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95"
+            className={`absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-8 py-4 rounded-lg shadow-xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 ${
+              recommendedVenues.length > 0 ? 'animate-pulse ring-4 ring-amber-400 ring-opacity-75' : ''
+            }`}
           >
             <div className="flex items-center gap-3">
               <img src={lordLordKyle} alt="Lord Lord" className="w-8 h-8 rounded-full border-2 border-green-50" />
@@ -439,6 +499,11 @@ Created with Edinburgh Concierge`;
               {itinerary.length > 0 && (
                 <span className="bg-green-950 px-3 py-1 rounded-full text-sm font-bold">
                   {itinerary.length}
+                </span>
+              )}
+              {recommendedVenues.length > 0 && (
+                <span className="bg-amber-500 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                  Ready!
                 </span>
               )}
             </div>
@@ -586,7 +651,9 @@ Created with Edinburgh Concierge`;
         {/* Tonight's Itinerary Button - Sticky bottom */}
         <button
           onClick={() => setCurrentView('itinerary')}
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
+          className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50 ${
+            recommendedVenues.length > 0 ? 'animate-pulse ring-4 ring-amber-400 ring-opacity-75' : ''
+          }`}
         >
           <div className="flex items-center gap-2">
             <img src={lordLordKyle} alt="Lord Lord" className="w-6 h-6 rounded-full border-2 border-green-50" />
@@ -594,6 +661,11 @@ Created with Edinburgh Concierge`;
             {itinerary.length > 0 && (
               <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
                 {itinerary.length}
+              </span>
+            )}
+            {recommendedVenues.length > 0 && (
+              <span className="bg-amber-500 px-2 py-1 rounded-full text-sm font-bold animate-pulse">
+                Ready!
               </span>
             )}
           </div>
@@ -679,7 +751,9 @@ Created with Edinburgh Concierge`;
         {/* Tonight's Itinerary Button - Fixed position above input */}
         <button
           onClick={() => setCurrentView('itinerary')}
-          className="fixed bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50"
+          className={`fixed bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 px-6 py-3 rounded-lg shadow-2xl transition-all hover:scale-105 border-2 border-green-950 active:scale-95 z-50 ${
+            recommendedVenues.length > 0 ? 'animate-pulse ring-4 ring-amber-400 ring-opacity-75' : ''
+          }`}
         >
           <div className="flex items-center gap-2">
             <img src={lordLordKyle} alt="Lord Lord" className="w-6 h-6 rounded-full border-2 border-green-50" />
@@ -687,6 +761,11 @@ Created with Edinburgh Concierge`;
             {itinerary.length > 0 && (
               <span className="bg-green-950 px-2 py-1 rounded-full text-sm font-bold">
                 {itinerary.length}
+              </span>
+            )}
+            {recommendedVenues.length > 0 && (
+              <span className="bg-amber-500 px-2 py-1 rounded-full text-sm font-bold animate-pulse">
+                Ready!
               </span>
             )}
           </div>
