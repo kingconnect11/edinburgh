@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List, Loader2, Copy, Hotel, Share2, Download, Image as ImageIcon } from 'lucide-react';
+import { X, Navigation, Coffee, Utensils, Wine, Music, MapPin, DollarSign, ChevronLeft, Map as MapIcon, List, Loader2, Copy, Hotel, Share2, Download, Image as ImageIcon, Volume2, VolumeX, SkipForward } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { VENUES_DATA, Venue } from './data/venues';
 import slateBackground from './slate-background.jpeg';
@@ -7,10 +7,15 @@ import scrollBackground from './scroll-background.jpg';
 import leatherBook from './leather-book.png';
 import knightlyItinerary from './knightly_itinerary.png';
 import lordLordKyle from './lord-lord-Kyle.svg';
-import backgroundMusic from './background1.mp3';
+import backgroundMusic1 from './background1.mp3';
+import backgroundMusic2 from './bacground2.mp3';
+import backgroundMusic3 from './background3.mp3';
+import backgroundMusic4 from './background4.mp3';
 import conciergeWelcome from './concierge-welcome.mp3';
 import conciergeIcon from './SVG_Butler_Good.svg';
 import { generateItineraryWithClaude, generateConciergeResponse } from './claudeAPI';
+
+const BACKGROUND_TRACKS = [backgroundMusic1, backgroundMusic2, backgroundMusic3, backgroundMusic4];
 
 const CATEGORIES = [
   { id: 'drinks', label: 'Drinks', icon: Wine, angle: -75 },
@@ -33,6 +38,8 @@ const App = () => {
   const [showMapView, setShowMapView] = useState(false);
   const [isConciergeThinking, setIsConciergeThinking] = useState(false);
   const [recommendedVenues, setRecommendedVenues] = useState<number[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
 
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const welcomeSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -41,8 +48,12 @@ const App = () => {
   const [isExportingImage, setIsExportingImage] = useState(false);
 
   useEffect(() => {
-    // Initialize background music
-    bgMusicRef.current = new Audio(backgroundMusic);
+    // Randomly select initial track
+    const randomIndex = Math.floor(Math.random() * BACKGROUND_TRACKS.length);
+    setCurrentTrackIndex(randomIndex);
+
+    // Initialize background music with random track
+    bgMusicRef.current = new Audio(BACKGROUND_TRACKS[randomIndex]);
     bgMusicRef.current.loop = true;
     bgMusicRef.current.volume = 0.6; // 60% volume
 
@@ -389,6 +400,45 @@ const App = () => {
     }, 1500);
   };
 
+  const handleSkipTrack = () => {
+    // Select random track different from current one
+    let newIndex = currentTrackIndex;
+    if (BACKGROUND_TRACKS.length > 1) {
+      while (newIndex === currentTrackIndex) {
+        newIndex = Math.floor(Math.random() * BACKGROUND_TRACKS.length);
+      }
+    }
+
+    setCurrentTrackIndex(newIndex);
+
+    // Stop current track and load new one
+    if (bgMusicRef.current) {
+      const wasPlaying = !bgMusicRef.current.paused;
+      const currentVolume = bgMusicRef.current.volume;
+
+      bgMusicRef.current.pause();
+      bgMusicRef.current = new Audio(BACKGROUND_TRACKS[newIndex]);
+      bgMusicRef.current.loop = true;
+      bgMusicRef.current.volume = currentVolume;
+
+      if (wasPlaying) {
+        bgMusicRef.current.play().catch(err => console.log('Play prevented'));
+      }
+    }
+  };
+
+  const handleToggleMute = () => {
+    if (bgMusicRef.current) {
+      if (isMuted) {
+        bgMusicRef.current.volume = 0.6;
+        setIsMuted(false);
+      } else {
+        bgMusicRef.current.volume = 0;
+        setIsMuted(true);
+      }
+    }
+  };
+
   const addToItinerary = (venueId: number) => {
     setItinerary(prev =>
       prev.includes(venueId)
@@ -478,6 +528,24 @@ Created with Edinburgh Concierge`;
           backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${slateBackground})`
         }}>
         <div className="relative w-full max-w-3xl h-screen flex items-center justify-center px-4">
+          {/* Music Controls - Top Right Corner */}
+          <div className="absolute top-8 right-8 flex gap-2 z-10">
+            <button
+              onClick={handleToggleMute}
+              className="bg-gradient-to-br from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 p-3 rounded-full shadow-lg transition-all hover:scale-110 border-2 border-green-950 active:scale-95"
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={handleSkipTrack}
+              className="bg-gradient-to-br from-green-800 to-green-950 hover:from-green-700 hover:to-green-900 text-green-50 p-3 rounded-full shadow-lg transition-all hover:scale-110 border-2 border-green-950 active:scale-95"
+              title="Skip Track"
+            >
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+
           {/* Category Buttons in Arc - Lower positioning */}
           {CATEGORIES.map((cat) => {
             const radius = 42;
