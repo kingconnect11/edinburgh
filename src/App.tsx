@@ -32,6 +32,7 @@ const App = () => {
   const [userInput, setUserInput] = useState('');
   const [showMapView, setShowMapView] = useState(false);
   const [isConciergeThinking, setIsConciergeThinking] = useState(false);
+  const [recommendedVenues, setRecommendedVenues] = useState<number[]>([]);
 
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const welcomeSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -90,6 +91,56 @@ const App = () => {
     }
   }, [currentView, itinerary, itineraryDescription]);
 
+  // Clear recommended venues when leaving concierge view
+  useEffect(() => {
+    if (currentView !== 'concierge') {
+      setRecommendedVenues([]);
+    }
+  }, [currentView]);
+
+  // Helper: Extract venue IDs from text by matching venue names
+  const extractVenueIdsFromText = (text: string): number[] => {
+    const lowerText = text.toLowerCase();
+    const foundVenueIds: number[] = [];
+
+    VENUES_DATA.forEach(venue => {
+      // Check if venue name appears in the text (case-insensitive)
+      if (lowerText.includes(venue.name.toLowerCase())) {
+        foundVenueIds.push(venue.id);
+      }
+    });
+
+    return foundVenueIds;
+  };
+
+  // Helper: Detect if user message is a confirmation
+  const isConfirmation = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase().trim();
+    const confirmationPhrases = [
+      'ok',
+      'okay',
+      'sounds good',
+      'sounds great',
+      'sounds perfect',
+      'let\'s do it',
+      'let\'s go',
+      'sounds like a plan',
+      'perfect',
+      'yes',
+      'yeah',
+      'yep',
+      'sure',
+      'absolutely',
+      'definitely',
+      'i\'m in',
+      'let\'s do that',
+      'that works',
+      'great'
+    ];
+
+    return confirmationPhrases.some(phrase => lowerMessage.includes(phrase));
+  };
+
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentView('guide');
@@ -115,6 +166,8 @@ const App = () => {
     if (!userInput.trim() || isConciergeThinking) return;
 
     const userMessage = userInput;
+    const isUserConfirming = isConfirmation(userMessage);
+
     const newMessages = [
       ...conciergeMessages,
       { role: 'user', content: userMessage }
@@ -130,6 +183,16 @@ const App = () => {
 
       if (aiResponse) {
         newMessages.push({ role: 'assistant', content: aiResponse });
+
+        // Extract venue IDs from the AI response and add to recommended venues
+        const venueIds = extractVenueIdsFromText(aiResponse);
+        if (venueIds.length > 0) {
+          setRecommendedVenues(prev => {
+            // Add new venues, avoiding duplicates
+            const combined = [...prev, ...venueIds];
+            return Array.from(new Set(combined));
+          });
+        }
       } else {
         // Fallback to basic search
         const query = userMessage.toLowerCase();
@@ -160,6 +223,15 @@ const App = () => {
           : "Could you tell me more about what you're in the mood for? Perhaps drinks, meals, coffee, dancing, or free attractions?";
 
         newMessages.push({ role: 'assistant', content: response });
+
+        // Add recommended venues from fallback
+        if (recommendations.length > 0) {
+          const venueIds = recommendations.map(v => v.id);
+          setRecommendedVenues(prev => {
+            const combined = [...prev, ...venueIds];
+            return Array.from(new Set(combined));
+          });
+        }
       }
     } catch (error) {
       console.error('Error in concierge response:', error);
@@ -171,6 +243,19 @@ const App = () => {
 
     setConciergeMessages(newMessages);
     setIsConciergeThinking(false);
+
+    // If user confirmed and we have recommended venues, add them to itinerary and switch views
+    if (isUserConfirming && recommendedVenues.length > 0) {
+      // Wait a moment for the user to see the butler's farewell message
+      setTimeout(() => {
+        setItinerary(prev => {
+          const combined = [...prev, ...recommendedVenues];
+          return Array.from(new Set(combined));
+        });
+        setRecommendedVenues([]);
+        setCurrentView('itinerary');
+      }, 1500);
+    }
   };
 
   const addToItinerary = (venueId: number) => {
